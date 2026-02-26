@@ -113,15 +113,33 @@ function escapeHTML(str) {
 }
 
 function renderMarkdownSafely(text) {
-  // Bold, italic
-  let html = escapeHTML(text)
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br>');
-  // Basic code blocks
-  html = html.replace(/```(.*?)<br>([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-  return html;
+  if (!window.marked) return escapeHTML(text).replace(/\n/g, '<br>');
+
+  // Protect Math blocks from Marked parser
+  const mathStash = [];
+  function stashMath(str) {
+    const id = `\x00MATH${mathStash.length}\x00`;
+    mathStash.push(str);
+    return id;
+  }
+
+  let t = text;
+  t = t.replace(/\\\[[\s\S]*?\\\]/g, m => stashMath(m));
+  t = t.replace(/\\\([\s\S]*?\\\)/g, m => stashMath(m));
+  t = t.replace(/\$\$[\s\S]*?\$\$/g, m => stashMath(m));
+  // Single $ math (only if not escaped)
+  t = t.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
+    return prefix + stashMath('$' + math + '$');
+  });
+
+  // Use marked.js for standard GH flavored markdown
+  marked.setOptions({ breaks: true, gfm: true });
+  t = marked.parse(t);
+
+  // Restore math blocks directly back into HTML
+  t = t.replace(/\x00MATH(\d+)\x00/g, (_, idx) => mathStash[+idx]);
+
+  return t;
 }
 
 function appendMessage(role, text) {
@@ -166,6 +184,19 @@ function appendMessage(role, text) {
 
   msgDiv.appendChild(bubbleWrapper);
   chatContainer.appendChild(msgDiv);
+
+  // Render KaTeX Math after attaching to DOM
+  if (role === 'assistant' && window.renderMathInElement) {
+    renderMathInElement(bubble, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false }
+      ],
+      throwOnError: false
+    });
+  }
 
   if (window.lucide) lucide.createIcons({ root: msgDiv });
 
