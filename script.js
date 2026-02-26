@@ -62,7 +62,11 @@ function buildWelcomeHTML(subtitle) {
 
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,200)+'px'; }
 function handleKeyDown(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
-function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  // Double-tap after paint to ensure it works during streaming
+  requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+}
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
 function sendSuggestion(el) {
