@@ -1,155 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXUS — AI Research Assistant</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus • Advanced AI</title>
+  <!-- Modern, clean typography -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+  <!-- Premium background elements -->
+  <div class="bg-gradient-spot spot-1"></div>
+  <div class="bg-gradient-spot spot-2"></div>
+  <div class="bg-grid"></div>
 
-<div class="scan-overlay"></div>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-box">
+          <i data-lucide="hexagon" class="logo-icon"></i>
+        </div>
+        <h2>Nexus</h2>
+      </div>
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 36 36" fill="none">
-        <polygon points="18,2 34,10 34,26 18,34 2,26 2,10" stroke="#63b3ed" stroke-width="1.5" fill="none" opacity="0.6"/>
-        <polygon points="18,7 29,13 29,23 18,29 7,23 7,13" stroke="#68d391" stroke-width="1" fill="none" opacity="0.5"/>
-        <circle cx="18" cy="18" r="4" fill="#63b3ed" opacity="0.8"/>
-        <line x1="18" y1="2"  x2="18" y2="7"  stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-        <line x1="18" y1="29" x2="18" y2="34" stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-        <line x1="2"  y1="10" x2="7"  y2="13" stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-        <line x1="34" y1="10" x2="29" y2="13" stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-        <line x1="2"  y1="26" x2="7"  y2="23" stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-        <line x1="34" y1="26" x2="29" y2="23" stroke="#63b3ed" stroke-width="1.5" opacity="0.4"/>
-      </svg>
-    </div>
-    <span class="logo-text">NEXUS</span>
-  </div>
-  <div class="status-bar">
-    <div class="tools-badge">
-      <div class="tool-chip arxiv"  id="chip-arxiv">ARXIV</div>
-      <div class="tool-chip wiki"   id="chip-wiki">WIKI</div>
-      <div class="tool-chip tavily" id="chip-tavily">TAVILY</div>
-    </div>
-    <div class="status-pill"><div class="dot"></div>ONLINE</div>
-    <div class="thread-control">
-      <span>THREAD</span>
-      <input type="text" id="threadId" value="1" maxlength="12">
-      <button id="newThreadBtn"
-        style="display:flex;align-items:center;gap:5px;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.3);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:0.06em;transition:all 0.2s;"
-        onmouseover="this.style.background='rgba(99,179,237,0.2)'"
-        onmouseout="this.style.background='rgba(99,179,237,0.1)'">+ NEW</button>
-    </div>
-  </div>
-</header>
+      <div class="sidebar-actions">
+        <button id="new-chat-btn" class="btn-primary">
+          <i data-lucide="plus"></i>
+          <span>New Chat</span>
+        </button>
+      </div>
 
-<main>
-  <div class="chat-area">
-    <div id="messages">
-      <div class="welcome" id="welcomeScreen">
-        <svg class="hexagon" viewBox="0 0 80 80" fill="none">
-          <polygon points="40,4 72,22 72,58 40,76 8,58 8,22" stroke="url(#g1)" stroke-width="2" fill="rgba(99,179,237,0.04)"/>
-          <polygon points="40,14 62,26 62,54 40,66 18,54 18,26" stroke="url(#g2)" stroke-width="1.5" fill="rgba(104,211,145,0.03)" stroke-dasharray="4 2"/>
-          <circle cx="40" cy="40" r="10" fill="url(#g3)" opacity="0.9"/>
-          <circle cx="40" cy="40" r="16" stroke="url(#g1)" stroke-width="1" fill="none" opacity="0.4"/>
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#63b3ed"/><stop offset="100%" stop-color="#68d391"/>
-            </linearGradient>
-            <linearGradient id="g2" x1="80" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#68d391"/><stop offset="100%" stop-color="#b794f4"/>
-            </linearGradient>
-            <radialGradient id="g3">
-              <stop offset="0%" stop-color="#63b3ed"/><stop offset="100%" stop-color="#4299e1"/>
-            </radialGradient>
-          </defs>
-        </svg>
-        <h1>Your AI Research<br>Command Center</h1>
-        <p>Powered by Groq + LangGraph with access to Arxiv, Wikipedia &amp; Tavily. Ask anything — I'll find the answers.</p>
-        <div class="suggestion-grid">
-          <div class="suggestion" onclick="sendSuggestion(this)">
-            <strong>📄 Research</strong>Latest breakthroughs in quantum computing from Arxiv
-          </div>
-          <div class="suggestion" onclick="sendSuggestion(this)">
-            <strong>🌐 Web Search</strong>What are the newest LLM models released in 2025?
-          </div>
-          <div class="suggestion" onclick="sendSuggestion(this)">
-            <strong>📚 Wikipedia</strong>Explain transformer architecture and attention mechanisms
-          </div>
-          <div class="suggestion" onclick="sendSuggestion(this)">
-            <strong>🔬 Multi-Tool</strong>Overview of CRISPR gene editing current state
-          </div>
+      <div class="session-info">
+        <span class="label">Current Session</span>
+        <div class="thread-badge">
+          <i data-lucide="hash" class="sm-icon"></i>
+          <span id="thread-id-display">Connecting...</span>
         </div>
       </div>
-    </div><!-- /#messages -->
 
-    <div class="input-area">
-      <div class="input-wrapper">
-        <textarea id="userInput"
-          placeholder="Ask anything — research, web, knowledge..."
-          rows="1"
-          onkeydown="handleKeyDown(event)"
-          oninput="autoResize(this)"></textarea>
-        <button class="stop-btn" id="stopBtn" onclick="stopStreaming()" title="Stop generating">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          System Online
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Chat Area -->
+    <main class="chat-layout">
+      <header class="mobile-header">
+        <div class="logo-box-mobile">
+          <i data-lucide="hexagon"></i> Nexus
+        </div>
+        <button id="mobile-new-chat" class="btn-icon">
+          <i data-lucide="plus"></i>
         </button>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-      <div class="input-footer">
-        <span>Enter to send · Shift+Enter for new line</span>
-        <span>Groq · LangGraph · MemorySaver</span>
-      </div>
-    </div>
-  </div><!-- /.chat-area -->
+      </header>
 
-  <div class="side-panel">
-    <div class="panel-section">
-      <h3>Tools</h3>
-      <div class="tool-card arxiv" id="card-arxiv">
-        <div class="tool-card-name"><span class="icon">📄</span> ArXiv</div>
-        <div class="tool-card-desc">Scientific papers &amp; preprints. 2 results, 500 char preview.</div>
+      <div id="chat-container">
+        <div class="welcome-view">
+          <div class="welcome-icon">
+            <i data-lucide="bot"></i>
+          </div>
+          <h1>How can I assist you?</h1>
+          <p>I am connected to your secure API and ready to help.</p>
+        </div>
       </div>
-      <div class="tool-card wiki" id="card-wiki">
-        <div class="tool-card-name"><span class="icon">📚</span> Wikipedia</div>
-        <div class="tool-card-desc">Encyclopedia knowledge base. 1 result, 500 char depth.</div>
-      </div>
-      <div class="tool-card tavily" id="card-tavily">
-        <div class="tool-card-name"><span class="icon">🌐</span> Tavily</div>
-        <div class="tool-card-desc">Real-time web search. Current news &amp; live data.</div>
-      </div>
-    </div>
-    <div class="panel-section">
-      <h3>Session</h3>
-      <div>
-        <div class="stat-row"><span class="stat-label">Messages</span><span class="stat-val" id="msgCount">0</span></div>
-        <div class="stat-row"><span class="stat-label">Thread</span><span class="stat-val" id="sessionId">1</span></div>
-        <div class="stat-row"><span class="stat-label">Model</span><span class="stat-val">openai/gpt-oss-120b</span></div>
-        <div class="stat-row"><span class="stat-label">Memory</span><span class="stat-val" style="color:var(--accent2)">Active</span></div>
-      </div>
-    </div>
-    <div class="panel-section">
-      <h3>Shortcuts</h3>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);line-height:2;">
-        <div><span style="color:var(--accent)">Enter</span> — Send</div>
-        <div><span style="color:var(--accent)">Shift+Enter</span> — Newline</div>
-        <div><span style="color:var(--accent)">Hover msg</span> — Copy / PDF</div>
-        <div><span style="color:var(--accent)">Thread ID</span> — Top right</div>
-      </div>
-    </div>
-  </div><!-- /.side-panel -->
-</main>
 
-<script src="script.js"></script>
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="message-input" placeholder="Ask anything..." rows="1" autofocus></textarea>
+          <button id="send-btn" class="send-btn" disabled title="Send message">
+            <i data-lucide="arrow-up"></i>
+          </button>
+        </div>
+        <div class="input-disclaimer">
+          Nexus can make mistakes. Consider verifying important information.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- jsPDF loaded dynamically in JS -->
+  <script src="script.js"></script>
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
 </body>
+
 </html>
