@@ -265,7 +265,20 @@ function exportToPDF(rawText) {
 
   doc.setTextColor(0);
   doc.setFontSize(11);
-  const cleanText = rawText.replace(/\*/g, '').replace(/_/g, '').replace(/`/g, '');
+
+  // Fix PDF character spacing and missing text issues by replacing formatting 
+  // unicode characters (smart quotes, em-dashes) with ASCII equivalents, and stripping
+  // other non-ASCII characters that break jsPDF's built-in Helvetica font rendering.
+  const cleanText = rawText
+    .replace(/\*/g, '')
+    .replace(/_/g, '')
+    .replace(/`/g, '')
+    .replace(/[\u2018\u2019]/g, "'") // Smart single quotes
+    .replace(/[\u201C\u201D]/g, '"') // Smart double quotes
+    .replace(/[\u2013\u2014]/g, '-') // En and Em dashes
+    .replace(/[\u2026]/g, '...')     // Ellipsis
+    .replace(/[^\x00-\x7F]/g, '');   // Fallback: strip remaining non-ASCII characters
+
   const splitText = doc.splitTextToSize(cleanText, 180);
   doc.text(splitText, 10, 50);
 
