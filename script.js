@@ -75,9 +75,23 @@ function renderSessionList() {
   allSessions.forEach((sessionId, index) => {
     const item = document.createElement('div');
     item.className = 'history-item' + (sessionId === currentThreadId ? ' active' : '');
-    item.innerHTML = `<i data-lucide="message-square"></i> Session ${allSessions.length - index}`;
-    item.title = sessionId;
-    item.onclick = () => switchSession(sessionId);
+
+    const label = document.createElement('span');
+    label.innerHTML = `<i data-lucide="message-square"></i> Session ${allSessions.length - index}`;
+    label.style.flex = '1';
+    label.onclick = () => switchSession(sessionId);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-session-btn';
+    deleteBtn.innerHTML = `<i data-lucide="trash-2"></i>`;
+    deleteBtn.title = 'Delete session';
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      deleteSession(sessionId);
+    };
+
+    item.appendChild(label);
+    item.appendChild(deleteBtn);
     chatHistoryList.appendChild(item);
   });
 
@@ -128,6 +142,28 @@ async function loadHistory() {
       </div>
     `;
     if (window.lucide) lucide.createIcons();
+  }
+}
+
+async function deleteSession(sessionId) {
+  const confirmed = confirm("Delete this session permanently from database?");
+  if (!confirmed) return;
+
+  try {
+    await fetch(`${BASE_URL}/history/${sessionId}`, {
+      method: 'DELETE',
+    });
+  } catch (err) {
+    console.error("Failed to delete from database", err);
+  }
+
+  allSessions = allSessions.filter(id => id !== sessionId);
+  localStorage.setItem("all_sessions", JSON.stringify(allSessions));
+
+  if (sessionId === currentThreadId) {
+    startNewSession();
+  } else {
+    renderSessionList();
   }
 }
 
@@ -309,27 +345,7 @@ function removeLoading(id) {
 function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
-async function deleteSession(sessionId) {
-  const confirmed = confirm("Delete this session permanently from database?");
-  if (!confirmed) return;
 
-  try {
-    await fetch(`${BASE_URL}/history/${sessionId}`, {
-      method: 'DELETE',
-    });
-  } catch (err) {
-    console.error("Failed to delete from database", err);
-  }
-
-  allSessions = allSessions.filter(id => id !== sessionId);
-  localStorage.setItem("all_sessions", JSON.stringify(allSessions));
-
-  if (sessionId === currentThreadId) {
-    startNewSession();
-  } else {
-    renderSessionList();
-  }
-}
 function exportToPDF(rawText) {
   if (!window.jspdf) {
     alert("PDF generator is still loading. Try again in a moment.");

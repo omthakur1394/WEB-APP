@@ -825,3 +825,45 @@ textarea::placeholder {
   flex-shrink: 0;
   color: var(--accent-primary);
 }
+.delete-session-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.history-item:hover .delete-session-btn {
+  opacity: 1;
+}
+
+.delete-session-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.delete-session-btn i {
+  width: 13px;
+  height: 13px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-item span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+}
