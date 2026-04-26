@@ -40,7 +40,6 @@ function startNewSession() {
   currentThreadId = generateDynamicId();
   localStorage.setItem("thread_id", currentThreadId);
 
-  // Save session list
   if (!allSessions.includes(currentThreadId)) {
     allSessions.unshift(currentThreadId);
     localStorage.setItem("all_sessions", JSON.stringify(allSessions));
@@ -92,6 +91,7 @@ async function switchSession(sessionId) {
   renderSessionList();
   chatContainer.innerHTML = '';
   await loadHistory();
+  messageInput.focus();
 }
 
 async function loadHistory() {
@@ -120,6 +120,14 @@ async function loadHistory() {
 
   } catch (err) {
     console.error("Failed to load history", err);
+    chatContainer.innerHTML = `
+      <div class="welcome-view">
+        <div class="welcome-icon"><i data-lucide="bot"></i></div>
+        <h1>How can I assist you?</h1>
+        <p>I am connected to your secure API and ready to help.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -152,7 +160,6 @@ async function sendMessage() {
   const welcomeView = document.querySelector('.welcome-view');
   if (welcomeView) welcomeView.remove();
 
-  // Save session to list if not already saved
   if (!allSessions.includes(currentThreadId)) {
     allSessions.unshift(currentThreadId);
     localStorage.setItem("all_sessions", JSON.stringify(allSessions));
