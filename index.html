@@ -5,13 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus • Advanced AI</title>
-  <!-- Modern, clean typography -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
-  <!-- Lucide Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Marked and KaTeX -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -20,13 +15,11 @@
 </head>
 
 <body>
-  <!-- Premium background elements -->
   <div class="bg-gradient-spot spot-1"></div>
   <div class="bg-gradient-spot spot-2"></div>
   <div class="bg-grid"></div>
 
   <div class="app-container">
-    <!-- Sidebar Navigation -->
     <nav class="sidebar">
       <div class="sidebar-header">
         <div class="logo-box">
@@ -50,6 +43,14 @@
         </div>
       </div>
 
+      <!-- ADDED: Chat History Section -->
+      <div class="history-section">
+        <span class="label">Chat History</span>
+        <div id="chat-history-list" class="chat-history-list">
+          <div class="history-empty">No history yet</div>
+        </div>
+      </div>
+
       <div class="sidebar-footer">
         <div class="status-indicator">
           <div class="status-dot"></div>
@@ -58,7 +59,6 @@
       </div>
     </nav>
 
-    <!-- Main Chat Area -->
     <main class="chat-layout">
       <header class="mobile-header">
         <div class="logo-box-mobile">
@@ -93,12 +93,8 @@
     </main>
   </div>
 
-  <!-- jsPDF loaded dynamically in JS -->
   <script src="script.js"></script>
-  <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-  </script>
+  <script>lucide.createIcons();</script>
 </body>
 
 </html>

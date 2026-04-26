@@ -1,6 +1,6 @@
 const API_URL = "https://falling-forest-1f86.omthakur1394.workers.dev/chat";
+const BASE_URL = "https://falling-forest-1f86.omthakur1394.workers.dev";
 
-// Ensure jsPDF loads for exports
 if (!document.getElementById('jspdf-script')) {
   const s = document.createElement('script');
   s.id = 'jspdf-script';
@@ -14,23 +14,18 @@ const sendBtn = document.getElementById('send-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const mobileNewChat = document.getElementById('mobile-new-chat');
 const threadDisplay = document.getElementById('thread-id-display');
+const chatHistoryList = document.getElementById('chat-history-list');
 
 let currentThreadId = '';
+let allSessions = [];
 
 function init() {
-  // Load existing thread_id from localStorage or create new one
+  loadAllSessions();
   const saved = localStorage.getItem("thread_id");
   if (saved) {
     currentThreadId = saved;
     if (threadDisplay) threadDisplay.textContent = currentThreadId;
-    chatContainer.innerHTML = `
-      <div class="welcome-view">
-        <div class="welcome-icon"><i data-lucide="bot"></i></div>
-        <h1>Welcome back!</h1>
-        <p>Your previous session has been restored.</p>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
+    loadHistory();
   } else {
     startNewSession();
   }
@@ -43,8 +38,16 @@ function generateDynamicId() {
 
 function startNewSession() {
   currentThreadId = generateDynamicId();
-  localStorage.setItem("thread_id", currentThreadId); // save to localStorage
+  localStorage.setItem("thread_id", currentThreadId);
+
+  // Save session list
+  if (!allSessions.includes(currentThreadId)) {
+    allSessions.unshift(currentThreadId);
+    localStorage.setItem("all_sessions", JSON.stringify(allSessions));
+  }
+
   if (threadDisplay) threadDisplay.textContent = currentThreadId;
+  renderSessionList();
 
   chatContainer.innerHTML = `
     <div class="welcome-view">
@@ -54,6 +57,70 @@ function startNewSession() {
     </div>
   `;
   if (window.lucide) lucide.createIcons();
+}
+
+function loadAllSessions() {
+  const saved = localStorage.getItem("all_sessions");
+  allSessions = saved ? JSON.parse(saved) : [];
+  renderSessionList();
+}
+
+function renderSessionList() {
+  if (!chatHistoryList) return;
+  if (allSessions.length === 0) {
+    chatHistoryList.innerHTML = `<div class="history-empty">No history yet</div>`;
+    return;
+  }
+
+  chatHistoryList.innerHTML = '';
+  allSessions.forEach((sessionId, index) => {
+    const item = document.createElement('div');
+    item.className = 'history-item' + (sessionId === currentThreadId ? ' active' : '');
+    item.innerHTML = `<i data-lucide="message-square"></i> Session ${allSessions.length - index}`;
+    item.title = sessionId;
+    item.onclick = () => switchSession(sessionId);
+    chatHistoryList.appendChild(item);
+  });
+
+  if (window.lucide) lucide.createIcons({ root: chatHistoryList });
+}
+
+async function switchSession(sessionId) {
+  currentThreadId = sessionId;
+  localStorage.setItem("thread_id", sessionId);
+  if (threadDisplay) threadDisplay.textContent = sessionId;
+  renderSessionList();
+  chatContainer.innerHTML = '';
+  await loadHistory();
+}
+
+async function loadHistory() {
+  try {
+    const response = await fetch(`${BASE_URL}/history/${currentThreadId}`);
+    const data = await response.json();
+    const messages = data.history;
+
+    if (!messages || messages.length === 0) {
+      chatContainer.innerHTML = `
+        <div class="welcome-view">
+          <div class="welcome-icon"><i data-lucide="bot"></i></div>
+          <h1>How can I assist you?</h1>
+          <p>I am connected to your secure API and ready to help.</p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    chatContainer.innerHTML = '';
+    messages.forEach(msg => {
+      if (msg.role === 'human') appendMessage('user', msg.content);
+      else if (msg.role === 'ai') appendMessage('assistant', msg.content);
+    });
+
+  } catch (err) {
+    console.error("Failed to load history", err);
+  }
 }
 
 [newChatBtn, mobileNewChat].forEach(btn => {
@@ -85,8 +152,14 @@ async function sendMessage() {
   const welcomeView = document.querySelector('.welcome-view');
   if (welcomeView) welcomeView.remove();
 
-  appendMessage('user', text);
+  // Save session to list if not already saved
+  if (!allSessions.includes(currentThreadId)) {
+    allSessions.unshift(currentThreadId);
+    localStorage.setItem("all_sessions", JSON.stringify(allSessions));
+    renderSessionList();
+  }
 
+  appendMessage('user', text);
   messageInput.value = '';
   messageInput.style.height = 'auto';
   sendBtn.disabled = true;
@@ -126,14 +199,12 @@ function escapeHTML(str) {
 
 function renderMarkdownSafely(text) {
   if (!window.marked) return escapeHTML(text).replace(/\n/g, '<br>');
-
   const mathStash = [];
   function stashMath(str) {
     const id = `\x00MATH${mathStash.length}\x00`;
     mathStash.push(str);
     return id;
   }
-
   let t = text;
   t = t.replace(/\\\[[\s\S]*?\\\]/g, m => stashMath(m));
   t = t.replace(/\\\([\s\S]*?\\\)/g, m => stashMath(m));
@@ -141,25 +212,20 @@ function renderMarkdownSafely(text) {
   t = t.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
     return prefix + stashMath('$' + math + '$');
   });
-
   marked.setOptions({ breaks: true, gfm: true });
   t = marked.parse(t);
   t = t.replace(/\x00MATH(\d+)\x00/g, (_, idx) => mathStash[+idx]);
-
   return t;
 }
 
 function appendMessage(role, text) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
-
   const bubbleWrapper = document.createElement('div');
   bubbleWrapper.className = 'bubble-wrapper';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.innerHTML = renderMarkdownSafely(text);
-
   bubbleWrapper.appendChild(bubble);
 
   if (role === 'assistant' && !msgDiv.classList.contains('loading-message')) {
@@ -205,11 +271,7 @@ function appendMessage(role, text) {
   }
 
   if (window.lucide) lucide.createIcons({ root: msgDiv });
-
-  requestAnimationFrame(() => {
-    msgDiv.classList.add('show');
-  });
-
+  requestAnimationFrame(() => { msgDiv.classList.add('show'); });
   scrollToBottom();
 }
 
@@ -217,25 +279,15 @@ function appendLoading(id) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'message assistant loading-message';
   msgDiv.id = id;
-
   const bubbleWrapper = document.createElement('div');
   bubbleWrapper.className = 'bubble-wrapper';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.innerHTML = `
-    <div class="typing-indicator">
-      <span></span><span></span><span></span>
-    </div>
-  `;
-
+  bubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
   bubbleWrapper.appendChild(bubble);
   msgDiv.appendChild(bubbleWrapper);
   chatContainer.appendChild(msgDiv);
-
-  requestAnimationFrame(() => {
-    msgDiv.classList.add('show');
-  });
+  requestAnimationFrame(() => { msgDiv.classList.add('show'); });
   scrollToBottom();
 }
 
@@ -258,33 +310,23 @@ function exportToPDF(rawText) {
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
   doc.text("Nexus AI Export", 10, 20);
-
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(150);
   doc.text(`Session ID: ${currentThreadId}`, 10, 28);
   doc.text(`Generated on: ${new Date().toLocaleString()}`, 10, 33);
-
   doc.setTextColor(0);
   doc.setFontSize(11);
-
   const cleanText = rawText
-    .replace(/\*/g, '')
-    .replace(/_/g, '')
-    .replace(/`/g, '')
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/[\u2026]/g, '...')
+    .replace(/\*/g, '').replace(/_/g, '').replace(/`/g, '')
+    .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-').replace(/[\u2026]/g, '...')
     .replace(/[^\x00-\x7F]/g, '');
-
   const splitText = doc.splitTextToSize(cleanText, 180);
   doc.text(splitText, 10, 50);
-
   doc.save(`Nexus_Export_${Date.now()}.pdf`);
 }
 
