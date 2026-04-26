@@ -18,7 +18,22 @@ const threadDisplay = document.getElementById('thread-id-display');
 let currentThreadId = '';
 
 function init() {
-  startNewSession();
+  // Load existing thread_id from localStorage or create new one
+  const saved = localStorage.getItem("thread_id");
+  if (saved) {
+    currentThreadId = saved;
+    if (threadDisplay) threadDisplay.textContent = currentThreadId;
+    chatContainer.innerHTML = `
+      <div class="welcome-view">
+        <div class="welcome-icon"><i data-lucide="bot"></i></div>
+        <h1>Welcome back!</h1>
+        <p>Your previous session has been restored.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  } else {
+    startNewSession();
+  }
   messageInput.focus();
 }
 
@@ -28,19 +43,16 @@ function generateDynamicId() {
 
 function startNewSession() {
   currentThreadId = generateDynamicId();
+  localStorage.setItem("thread_id", currentThreadId); // save to localStorage
   if (threadDisplay) threadDisplay.textContent = currentThreadId;
 
-  // Render premium welcome view
   chatContainer.innerHTML = `
-        <div class="welcome-view">
-            <div class="welcome-icon">
-                <i data-lucide="bot"></i>
-            </div>
-            <h1>How can I assist you?</h1>
-            <p>I am connected to your secure API and ready to help.</p>
-        </div>
-    `;
-  // Re-init lucide icons for newly injected HTML
+    <div class="welcome-view">
+      <div class="welcome-icon"><i data-lucide="bot"></i></div>
+      <h1>How can I assist you?</h1>
+      <p>I am connected to your secure API and ready to help.</p>
+    </div>
+  `;
   if (window.lucide) lucide.createIcons();
 }
 
@@ -115,7 +127,6 @@ function escapeHTML(str) {
 function renderMarkdownSafely(text) {
   if (!window.marked) return escapeHTML(text).replace(/\n/g, '<br>');
 
-  // Protect Math blocks from Marked parser
   const mathStash = [];
   function stashMath(str) {
     const id = `\x00MATH${mathStash.length}\x00`;
@@ -127,16 +138,12 @@ function renderMarkdownSafely(text) {
   t = t.replace(/\\\[[\s\S]*?\\\]/g, m => stashMath(m));
   t = t.replace(/\\\([\s\S]*?\\\)/g, m => stashMath(m));
   t = t.replace(/\$\$[\s\S]*?\$\$/g, m => stashMath(m));
-  // Single $ math (only if not escaped)
   t = t.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
     return prefix + stashMath('$' + math + '$');
   });
 
-  // Use marked.js for standard GH flavored markdown
   marked.setOptions({ breaks: true, gfm: true });
   t = marked.parse(t);
-
-  // Restore math blocks directly back into HTML
   t = t.replace(/\x00MATH(\d+)\x00/g, (_, idx) => mathStash[+idx]);
 
   return t;
@@ -185,7 +192,6 @@ function appendMessage(role, text) {
   msgDiv.appendChild(bubbleWrapper);
   chatContainer.appendChild(msgDiv);
 
-  // Render KaTeX Math after attaching to DOM
   if (role === 'assistant' && window.renderMathInElement) {
     renderMathInElement(bubble, {
       delimiters: [
@@ -218,10 +224,10 @@ function appendLoading(id) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.innerHTML = `
-        <div class="typing-indicator">
-            <span></span><span></span><span></span>
-        </div>
-    `;
+    <div class="typing-indicator">
+      <span></span><span></span><span></span>
+    </div>
+  `;
 
   bubbleWrapper.appendChild(bubble);
   msgDiv.appendChild(bubbleWrapper);
@@ -266,18 +272,15 @@ function exportToPDF(rawText) {
   doc.setTextColor(0);
   doc.setFontSize(11);
 
-  // Fix PDF character spacing and missing text issues by replacing formatting 
-  // unicode characters (smart quotes, em-dashes) with ASCII equivalents, and stripping
-  // other non-ASCII characters that break jsPDF's built-in Helvetica font rendering.
   const cleanText = rawText
     .replace(/\*/g, '')
     .replace(/_/g, '')
     .replace(/`/g, '')
-    .replace(/[\u2018\u2019]/g, "'") // Smart single quotes
-    .replace(/[\u201C\u201D]/g, '"') // Smart double quotes
-    .replace(/[\u2013\u2014]/g, '-') // En and Em dashes
-    .replace(/[\u2026]/g, '...')     // Ellipsis
-    .replace(/[^\x00-\x7F]/g, '');   // Fallback: strip remaining non-ASCII characters
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[\u2026]/g, '...')
+    .replace(/[^\x00-\x7F]/g, '');
 
   const splitText = doc.splitTextToSize(cleanText, 180);
   doc.text(splitText, 10, 50);
