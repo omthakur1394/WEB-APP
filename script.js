@@ -309,7 +309,27 @@ function removeLoading(id) {
 function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+async function deleteSession(sessionId) {
+  const confirmed = confirm("Delete this session permanently from database?");
+  if (!confirmed) return;
 
+  try {
+    await fetch(`${BASE_URL}/history/${sessionId}`, {
+      method: 'DELETE',
+    });
+  } catch (err) {
+    console.error("Failed to delete from database", err);
+  }
+
+  allSessions = allSessions.filter(id => id !== sessionId);
+  localStorage.setItem("all_sessions", JSON.stringify(allSessions));
+
+  if (sessionId === currentThreadId) {
+    startNewSession();
+  } else {
+    renderSessionList();
+  }
+}
 function exportToPDF(rawText) {
   if (!window.jspdf) {
     alert("PDF generator is still loading. Try again in a moment.");
