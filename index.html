@@ -82,10 +82,14 @@
       <div class="input-area">
         <div class="input-wrapper">
           <textarea id="message-input" placeholder="Ask anything..." rows="1" autofocus></textarea>
+          <button id="voice-btn" class="voice-btn" type="button" title="Start voice conversation" aria-label="Start voice conversation">
+            <i data-lucide="mic"></i>
+          </button>
           <button id="send-btn" class="send-btn" disabled title="Send message">
             <i data-lucide="arrow-up"></i>
           </button>
         </div>
+        <div id="voice-status" class="voice-status" aria-live="polite"></div>
         <div class="input-disclaimer">
           Nexus can make mistakes. Consider verifying important information.
         </div>
