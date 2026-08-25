@@ -1,5 +1,7 @@
-const API_URL = "https://falling-forest-1f86.omthakur1394.workers.dev/chat";
-const BASE_URL = "https://falling-forest-1f86.omthakur1394.workers.dev";
+const BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+  ? "http://127.0.0.1:8000"
+  : "https://falling-forest-1f86.omthakur1394.workers.dev";
+const API_URL = `${BASE_URL}/chat`;
 const VOICE_LANGUAGE = 'hi-IN';
 
 if (!document.getElementById('jspdf-script')) {
@@ -384,6 +386,7 @@ async function deleteSession(sessionId) {
   });
 });
 
+
 messageInput.addEventListener('input', () => {
   syncInputState();
 });
@@ -397,6 +400,111 @@ messageInput.addEventListener('keydown', (e) => {
 
 sendBtn.addEventListener('click', () => sendMessage());
 if (voiceBtn) voiceBtn.addEventListener('click', toggleVoiceConversation);
+
+function createStreamingAssistantMessage() {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message assistant';
+
+  const bubbleWrapper = document.createElement('div');
+  bubbleWrapper.className = 'bubble-wrapper';
+
+  const toolBadge = document.createElement('div');
+  toolBadge.className = 'tool-status-badge';
+  toolBadge.style.display = 'none';
+  bubbleWrapper.appendChild(toolBadge);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+  bubbleWrapper.appendChild(bubble);
+
+  msgDiv.appendChild(bubbleWrapper);
+  chatContainer.appendChild(msgDiv);
+  requestAnimationFrame(() => { msgDiv.classList.add('show'); });
+  scrollToBottom();
+
+  let accumulatedText = '';
+  let isFirstToken = true;
+
+  return {
+    setTool(toolName) {
+      toolBadge.style.display = 'inline-flex';
+      toolBadge.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Running ${escapeHTML(toolName)}...`;
+      if (window.lucide) lucide.createIcons({ root: toolBadge });
+      scrollToBottom();
+    },
+    clearTool() {
+      toolBadge.style.display = 'none';
+      toolBadge.innerHTML = '';
+    },
+    appendToken(token) {
+      if (isFirstToken) {
+        bubble.innerHTML = '';
+        isFirstToken = false;
+      }
+      accumulatedText += token;
+      bubble.innerHTML = renderMarkdownSafely(accumulatedText);
+      scrollToBottom();
+    },
+    getText() {
+      return accumulatedText;
+    },
+    finalize(finalText = null) {
+      if (finalText !== null) {
+        accumulatedText = finalText;
+      }
+      toolBadge.style.display = 'none';
+      if (isFirstToken && !accumulatedText) {
+        bubble.innerHTML = '<em>No response received.</em>';
+      } else {
+        bubble.innerHTML = renderMarkdownSafely(accumulatedText);
+      }
+
+      const actionRow = document.createElement('div');
+      actionRow.className = 'action-buttons';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'msg-action-btn';
+      copyBtn.innerHTML = `<i data-lucide="copy"></i> Copy`;
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(accumulatedText);
+        copyBtn.innerHTML = `<i data-lucide="check"></i> Copied!`;
+        if (window.lucide) lucide.createIcons({ root: copyBtn });
+        setTimeout(() => {
+          copyBtn.innerHTML = `<i data-lucide="copy"></i> Copy`;
+          if (window.lucide) lucide.createIcons({ root: copyBtn });
+        }, 2000);
+      };
+
+      const pdfBtn = document.createElement('button');
+      pdfBtn.className = 'msg-action-btn';
+      pdfBtn.innerHTML = `<i data-lucide="download"></i> PDF`;
+      pdfBtn.onclick = () => exportToPDF(accumulatedText);
+
+      actionRow.appendChild(copyBtn);
+      actionRow.appendChild(pdfBtn);
+      bubbleWrapper.appendChild(actionRow);
+
+      if (window.renderMathInElement) {
+        renderMathInElement(bubble, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '\\[', right: '\\]', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+
+      if (window.lucide) lucide.createIcons({ root: msgDiv });
+      scrollToBottom();
+    },
+    remove() {
+      msgDiv.remove();
+    }
+  };
+}
 
 async function sendMessage(options = {}) {
   const hasOptions = options && typeof options === 'object';
@@ -423,9 +531,8 @@ async function sendMessage(options = {}) {
   voiceFinalTranscript = '';
   activeVoiceTranscript = '';
 
-  const loadingId = 'loading-' + Date.now();
-  appendLoading(loadingId);
   if (voiceOnly) setVoiceStatus('Thinking...');
+  const streamMsg = createStreamingAssistantMessage();
 
   try {
     const response = await fetch(API_URL, {
@@ -434,30 +541,81 @@ async function sendMessage(options = {}) {
       body: JSON.stringify({ message: text, thread_id: currentThreadId })
     });
 
-    removeLoading(loadingId);
-
     if (!response.ok) {
+      streamMsg.remove();
       appendMessage('error', `Server error: ${response.statusText}`);
       if (voiceOnly) stopVoiceConversation(`Server error: ${response.statusText}`);
       return;
     }
 
-    const data = await response.json();
-    const answer = data.response || "No response text found.";
-    if (voiceOnly) {
-      speakAssistantResponse(answer);
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("text/event-stream") || response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Keep partial line in buffer
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("data: ")) {
+            const dataStr = trimmed.slice(6).trim();
+            if (!dataStr) continue;
+
+            try {
+              const eventData = JSON.parse(dataStr);
+              if (eventData.type === "token" && eventData.content) {
+                streamMsg.appendToken(eventData.content);
+              } else if (eventData.type === "tool_start") {
+                streamMsg.setTool(eventData.tool || "Tool");
+              } else if (eventData.type === "tool_end") {
+                streamMsg.clearTool();
+              }
+            } catch (_) {
+              streamMsg.appendToken(dataStr);
+            }
+          }
+        }
+      }
+
+      if (buffer.trim().startsWith("data: ")) {
+        try {
+          const eventData = JSON.parse(buffer.trim().slice(6).trim());
+          if (eventData.type === "token" && eventData.content) {
+            streamMsg.appendToken(eventData.content);
+          }
+        } catch (_) {}
+      }
+
+      streamMsg.finalize();
+      const finalResponseText = streamMsg.getText();
+
+      if (voiceOnly) {
+        speakAssistantResponse(finalResponseText);
+      }
     } else {
-      appendMessage('assistant', answer);
+      const data = await response.json();
+      const answer = data.response || "No response text found.";
+      streamMsg.finalize(answer);
+      if (voiceOnly) {
+        speakAssistantResponse(answer);
+      }
     }
 
   } catch (err) {
-    removeLoading(loadingId);
+    streamMsg.remove();
     appendMessage('error', 'Network error. Could not connect to the API.');
     if (voiceOnly) stopVoiceConversation('Network error. Could not connect to the API.');
     console.error(err);
   }
 }
-
 function escapeHTML(str) {
   return str.replace(/[&<>'"]/g,
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
