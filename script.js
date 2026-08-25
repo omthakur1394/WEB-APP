@@ -424,6 +424,7 @@ function createStreamingAssistantMessage() {
   scrollToBottom();
 
   let accumulatedText = '';
+  let accumulatedReasoning = '';
   let isFirstToken = true;
 
   return {
@@ -437,9 +438,17 @@ function createStreamingAssistantMessage() {
       toolBadge.style.display = 'none';
       toolBadge.innerHTML = '';
     },
+    appendReasoning(reasoningChunk) {
+      accumulatedReasoning += reasoningChunk;
+      toolBadge.style.display = 'inline-flex';
+      toolBadge.innerHTML = `<i data-lucide="sparkles" class="spin"></i> Thinking...`;
+      if (window.lucide) lucide.createIcons({ root: toolBadge });
+      scrollToBottom();
+    },
     appendToken(token) {
       if (isFirstToken) {
         bubble.innerHTML = '';
+        toolBadge.style.display = 'none';
         isFirstToken = false;
       }
       accumulatedText += token;
@@ -573,6 +582,8 @@ async function sendMessage(options = {}) {
               const eventData = JSON.parse(dataStr);
               if (eventData.type === "token" && eventData.content) {
                 streamMsg.appendToken(eventData.content);
+              } else if (eventData.type === "reasoning" && eventData.content) {
+                streamMsg.appendReasoning(eventData.content);
               } else if (eventData.type === "tool_start") {
                 streamMsg.setTool(eventData.tool || "Tool");
               } else if (eventData.type === "tool_end") {
@@ -590,6 +601,8 @@ async function sendMessage(options = {}) {
           const eventData = JSON.parse(buffer.trim().slice(6).trim());
           if (eventData.type === "token" && eventData.content) {
             streamMsg.appendToken(eventData.content);
+          } else if (eventData.type === "reasoning" && eventData.content) {
+            streamMsg.appendReasoning(eventData.content);
           }
         } catch (_) {}
       }
